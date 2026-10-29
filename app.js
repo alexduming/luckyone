@@ -575,20 +575,24 @@ function markAnswer(correct, index = 0) {
 }
 
 function clearHistory() {
-    if (isSpinning || history.length === 0) return;
-    if (!confirm('仅清空抽取记录？名单、分组、积分和已抽中状态将保留，已抽中的人仍不会再次入选。')) return;
-    const drawnNames = new Set(history.map(h => h.name));
-    students.forEach(s => { if (drawnNames.has(s.name)) s.drawn = true; });
+    if (isSpinning || !hasDrawProgress()) return;
+    if (!confirm('清空记录并重新开始抽取？所有人员将回到候选池，已抽取人数和答题统计归零。名单、分组和积分保留。')) return;
+    students.forEach(s => { s.drawn = false; });
     history = [];
+    stats = { totalDraws: 0, totalCorrect: 0 };
     clearResults();
     saveData();
     renderAll();
-    showToast('抽取记录已清空，已抽中状态保留');
+    showToast('已重置抽取进度，所有人员已回到候选池');
+}
+
+function hasDrawProgress() {
+    return history.length > 0 || students.some(s => s.drawn) || stats.totalDraws > 0 || stats.totalCorrect > 0;
 }
 
 function renderHistory() {
     document.getElementById('historyCount').textContent = history.length;
-    document.getElementById('clearHistoryBtn').disabled = isSpinning || history.length === 0;
+    document.getElementById('clearHistoryBtn').disabled = isSpinning || !hasDrawProgress();
     document.getElementById('historyList').innerHTML = history.map(h => {
         const date = new Date(h.time);
         const time = Number.isNaN(date.getTime()) ? h.time : date.toLocaleString('zh-CN', {hour12: false});

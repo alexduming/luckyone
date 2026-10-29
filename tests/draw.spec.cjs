@@ -82,16 +82,31 @@ const http = require('node:http');
         await page.waitForFunction(() => !isSpinning);
         assert.equal(await page.evaluate(() => new Set(history.map(h => h.name)).size), 3);
 
-        // Clearing records preserves the roster, groups, scores, and exclusion after reload.
-        const beforeClear = await page.evaluate(() => ({students, groups, columns, stats, settings}));
+        // Restart restores every candidate while preserving roster details and configuration.
+        await page.evaluate(() => markAnswer(true, 0));
+        const beforeClear = await page.evaluate(() => ({students: students.map(s => ({...s, drawn:false})), groups, columns, settings}));
         await page.click('#clearHistoryBtn');
         assert.equal(await page.locator('#historyCount').textContent(), '0');
         assert.equal(await page.locator('#clearHistoryBtn').isDisabled(), true);
-        assert.deepEqual(await page.evaluate(() => ({students, groups, columns, stats, settings})), beforeClear);
+        assert.deepEqual(await page.evaluate(() => ({students, groups, columns, settings})), beforeClear);
+        assert.deepEqual(await page.evaluate(() => stats), {totalDraws:0, totalCorrect:0});
+        assert.equal(await page.locator('#headerDraws').textContent(), '0');
+        assert.equal(await page.locator('#headerTotal').textContent(), '3');
         await page.reload();
         assert.equal(await page.evaluate(() => history.length), 0);
-        assert.equal(await page.evaluate(() => availableStudents().length), 0);
-        assert.equal(await page.locator('#drawBtn').isDisabled(), true);
+        assert.equal(await page.evaluate(() => availableStudents().length), 3);
+        assert.equal(await page.locator('#drawBtn').isDisabled(), false);
+        await page.click('#drawBtn');
+        await page.waitForFunction(() => !isSpinning);
+        assert.equal(await page.evaluate(() => new Set(history.map(h => h.name)).size), 3);
+        assert.equal(await page.evaluate(() => history.every(h => h.round === 1)), true);
+        // Users who cleared records in the previous version can still restart.
+        await page.evaluate(() => { history = []; saveData(); });
+        await page.reload();
+        assert.equal(await page.locator('#clearHistoryBtn').isDisabled(), false);
+        await page.click('#clearHistoryBtn');
+        assert.equal(await page.evaluate(() => availableStudents().length), 3);
+        assert.equal(await page.locator('#headerDraws').textContent(), '0');
 
         // Old records exclude already-drawn names; clearing candidates cannot revive them.
         await page.evaluate(() => {
