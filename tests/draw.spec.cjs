@@ -82,6 +82,17 @@ const http = require('node:http');
         await page.waitForFunction(() => !isSpinning);
         assert.equal(await page.evaluate(() => new Set(history.map(h => h.name)).size), 3);
 
+        // Clearing records preserves the roster, groups, scores, and exclusion after reload.
+        const beforeClear = await page.evaluate(() => ({students, groups, columns, stats, settings}));
+        await page.click('#clearHistoryBtn');
+        assert.equal(await page.locator('#historyCount').textContent(), '0');
+        assert.equal(await page.locator('#clearHistoryBtn').isDisabled(), true);
+        assert.deepEqual(await page.evaluate(() => ({students, groups, columns, stats, settings})), beforeClear);
+        await page.reload();
+        assert.equal(await page.evaluate(() => history.length), 0);
+        assert.equal(await page.evaluate(() => availableStudents().length), 0);
+        assert.equal(await page.locator('#drawBtn').isDisabled(), true);
+
         // Old records exclude already-drawn names; clearing candidates cannot revive them.
         await page.evaluate(() => {
             applyData({students:[{name:'旧用户',group:0},{name:'新用户',group:0}], groups:[{name:'旧组',members:['旧用户','新用户']}], history:[{name:'旧用户',correct:true,score:10,time:'12:00:00'}]});
