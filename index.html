@@ -878,7 +878,6 @@
             .name-display {
                 font-size: 12rem;
             }
-        }
 
         @media (max-width: 600px) {
             .header {
@@ -914,6 +913,7 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="upgrade.css">
 </head>
 <body>
     <div class="confetti-container" id="confettiContainer"></div>
@@ -921,18 +921,18 @@
     <header class="header">
         <h1>LUCKY ONE</h1>
         <div class="header-stats">
-            <div class="header-stat"><span id="headerTotal">0</span> STUDENTS</div>
-            <div class="header-stat"><span id="headerDraws">0</span> DRAWS</div>
+            <div class="header-stat"><span id="headerTotal">0</span> 位候选人</div>
+            <div class="header-stat"><span id="headerDraws">0</span> 人已抽取</div>
         </div>
     </header>
 
     <nav class="nav-tabs">
-        <button class="nav-tab active" data-panel="draw">Draw</button>
-        <button class="nav-tab" data-panel="students">Students</button>
-        <button class="nav-tab" data-panel="groups">Groups</button>
-        <button class="nav-tab" data-panel="questions">Questions</button>
-        <button class="nav-tab" data-panel="leaderboard">Leaderboard</button>
-        <button class="nav-tab" data-panel="settings">Settings</button>
+        <button class="nav-tab active" data-panel="draw">抽取</button>
+        <button class="nav-tab" data-panel="students">候选人</button>
+        <button class="nav-tab" data-panel="groups">分组</button>
+        <button class="nav-tab" data-panel="questions">题库</button>
+        <button class="nav-tab" data-panel="leaderboard">排行榜</button>
+        <button class="nav-tab" data-panel="settings">设置</button>
     </nav>
 
     <main class="main-content">
@@ -940,19 +940,16 @@
         <div class="draw-panel active" id="draw-panel">
             <div class="draw-main">
                 <div class="slot-machine">
-                    <div class="slot-label">Selected Student</div>
-                    <div class="slot-display" id="slotDisplay">
-                        <span class="name-display" id="nameDisplay">READY</span>
+                    <div class="draw-toolbar">
+                        <div><div class="slot-label">每列一人 · 不重复抽取</div><p id="drawHint" aria-live="polite"></p></div>
+                        <div class="column-controls"><button class="btn" id="removeColumn" onclick="changeColumns(-1)" aria-label="减少一列">−</button><strong id="columnCount">3 列</strong><button class="btn" id="addColumn" onclick="changeColumns(1)" aria-label="增加一列">＋</button></div>
                     </div>
+                    <div class="draw-columns" id="drawColumns" aria-live="polite"></div>
                     <button class="btn btn-primary draw-btn" id="drawBtn" onclick="startDraw()">
-                        START
+                        开始抽取
                     </button>
 
-                    <div class="score-actions" id="scoreActions">
-                        <button class="btn btn-correct" onclick="markAnswer(true)">CORRECT +10</button>
-                        <button class="btn btn-wrong" onclick="markAnswer(false)">WRONG +0</button>
-                        <button class="btn btn-black" onclick="showQuestion()">QUESTION</button>
-                    </div>
+                    <div class="score-actions" id="scoreActions"></div>
 
                     <div class="question-box" id="questionDisplay" style="display: none;">
                         <div class="question-header">Question</div>
@@ -974,7 +971,7 @@
 
                 <div class="sidebar-section">
                     <div class="section-title">
-                        History
+                        抽取记录
                         <span id="historyCount">0</span>
                     </div>
                     <div class="history-list" id="historyList">
@@ -990,20 +987,20 @@
         <div class="panel" id="students-panel">
             <div class="content-panel">
                 <div class="panel-header">
-                    <h2 class="panel-title">Students</h2>
-                    <p class="panel-subtitle">Add and manage student roster</p>
+                    <h2 class="panel-title">候选人</h2>
+                    <p class="panel-subtitle">按分组添加候选人；抽中后自动移出候选列表。同名视为同一人，重名请附加编号。</p>
                 </div>
 
                 <div class="card">
-                    <div class="card-header">Add Students</div>
+                    <div class="card-header">添加候选人</div>
                     <div class="card-body">
                         <div class="form-row">
-                            <label class="form-label">Enter names (one per line)</label>
+                            <label class="form-label" for="addGroup">添加到分组（文本和文件导入均使用此分组）</label><select id="addGroup"></select><label class="form-label" for="studentInput" style="margin-top:16px">姓名，每行一人</label>
                             <textarea id="studentInput" rows="4" placeholder="John Doe&#10;Jane Smith&#10;..."></textarea>
                         </div>
                         <div class="btn-group">
-                            <button class="btn btn-primary" onclick="addStudents()">Add</button>
-                            <button class="btn" onclick="clearStudents()">Clear All</button>
+                            <button class="btn btn-primary" onclick="addStudents()">添加</button>
+                            <button class="btn" onclick="clearStudents()">清空候选人</button>
                         </div>
                     </div>
                 </div>
@@ -1020,7 +1017,7 @@
                 </div>
 
                 <div class="card">
-                    <div class="card-header">Roster (<span id="studentCount">0</span>)</div>
+                    <div class="card-header">剩余候选人 (<span id="studentCount">0</span>)</div>
                     <div class="card-body">
                         <div class="student-grid" id="studentGrid">
                             <div class="empty-state">
@@ -1036,20 +1033,22 @@
         <div class="panel" id="groups-panel">
             <div class="content-panel">
                 <div class="panel-header">
-                    <h2 class="panel-title">Groups</h2>
-                    <p class="panel-subtitle">Randomly assign students to teams</p>
+                    <h2 class="panel-title">分组</h2>
+                    <p class="panel-subtitle">创建并命名抽取池，在候选人页面调整成员所属分组。</p>
                 </div>
 
                 <div class="card">
-                    <div class="card-header">Random Assignment</div>
+                    <div class="card-header">分组管理</div>
+                    <div class="card-body"><label class="form-label" for="newGroupName">新分组名称</label><input id="newGroupName" type="text" maxlength="60" placeholder="例如：技术组、市场组、嘉宾组"><div class="btn-group"><button class="btn btn-primary" onclick="createGroup()">创建分组</button></div></div>
+                </div><div class="card"><div class="card-header">随机分组（会重新分配现有成员）</div>
                     <div class="card-body">
                         <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
                             <div>
-                                <label class="form-label">Number of Groups</label>
-                                <input type="number" id="groupCount" value="4" min="2" max="10" class="setting-input">
+                                <label class="form-label">分组数量</label>
+                                <input type="number" id="groupCount" value="3" min="1" max="20" class="setting-input">
                             </div>
-                            <button class="btn btn-primary" onclick="randomizeGroups()">Randomize</button>
-                            <button class="btn" onclick="clearGroups()">Clear</button>
+                            <button class="btn btn-primary" onclick="randomizeGroups()">随机分配</button>
+                            <button class="btn" onclick="clearGroups()">清空分组</button>
                         </div>
                     </div>
                 </div>
@@ -1073,7 +1072,7 @@
         <div class="panel" id="questions-panel">
             <div class="content-panel">
                 <div class="panel-header">
-                    <h2 class="panel-title">Questions</h2>
+                    <h2 class="panel-title">题库</h2>
                     <p class="panel-subtitle">Create your question bank</p>
                 </div>
 
@@ -1133,7 +1132,7 @@
         <div class="panel" id="leaderboard-panel">
             <div class="content-panel">
                 <div class="panel-header">
-                    <h2 class="panel-title">Leaderboard</h2>
+                    <h2 class="panel-title">排行榜</h2>
                     <p class="panel-subtitle">Track performance and rankings</p>
                 </div>
 
@@ -1173,7 +1172,7 @@
         <div class="panel" id="settings-panel">
             <div class="content-panel">
                 <div class="panel-header">
-                    <h2 class="panel-title">Settings</h2>
+                    <h2 class="panel-title">设置</h2>
                     <p class="panel-subtitle">Configure system preferences</p>
                 </div>
 
@@ -1216,624 +1215,6 @@
 
     <div class="toast" id="toast"></div>
 
-    <script>
-        // Data
-        let students = [];
-        let groups = [];
-        let questions = [];
-        let history = [];
-        let currentStudent = null;
-        let currentQuestion = null;
-        let isSpinning = false;
-        let soundEnabled = true;
-        let audioContext = null;
-
-        let settings = {
-            correctScore: 10,
-            wrongScore: 0,
-            spinDuration: 2
-        };
-
-        let stats = {
-            totalDraws: 0,
-            totalCorrect: 0
-        };
-
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            loadData();
-            initTabs();
-            initFileUpload();
-            renderAll();
-        });
-
-        // Tab Navigation
-        function initTabs() {
-            document.querySelectorAll('.nav-tab').forEach(tab => {
-                tab.addEventListener('click', () => {
-                    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-                    document.querySelectorAll('.panel, .draw-panel').forEach(p => p.classList.remove('active'));
-                    tab.classList.add('active');
-                    document.getElementById(tab.dataset.panel + '-panel').classList.add('active');
-                });
-            });
-        }
-
-        // File Upload
-        function initFileUpload() {
-            const uploadArea = document.getElementById('fileUpload');
-            const fileInput = document.getElementById('fileInput');
-
-            uploadArea.addEventListener('click', () => fileInput.click());
-            uploadArea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                uploadArea.style.background = 'var(--white)';
-            });
-            uploadArea.addEventListener('dragleave', () => {
-                uploadArea.style.background = 'var(--gray)';
-            });
-            uploadArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                uploadArea.style.background = 'var(--gray)';
-                handleFile(e.dataTransfer.files[0]);
-            });
-            fileInput.addEventListener('change', (e) => {
-                if (e.target.files[0]) handleFile(e.target.files[0]);
-            });
-        }
-
-        function handleFile(file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const lines = e.target.result.split(/\r?\n/).filter(l => l.trim());
-                let added = 0;
-                lines.forEach(name => {
-                    if (name.trim() && !students.find(s => s.name === name.trim())) {
-                        students.push({ name: name.trim(), score: 0, group: null });
-                        added++;
-                    }
-                });
-                saveData();
-                renderStudents();
-                showToast(`IMPORTED ${added} STUDENTS`);
-            };
-            reader.readAsText(file);
-        }
-
-        // Students
-        function addStudents() {
-            const input = document.getElementById('studentInput');
-            const names = input.value.split(/\r?\n/).filter(n => n.trim());
-            let added = 0;
-            names.forEach(name => {
-                if (name.trim() && !students.find(s => s.name === name.trim())) {
-                    students.push({ name: name.trim(), score: 0, group: null });
-                    added++;
-                }
-            });
-            input.value = '';
-            saveData();
-            renderStudents();
-            if (added > 0) showToast(`ADDED ${added} STUDENTS`);
-        }
-
-        function clearStudents() {
-            if (confirm('Clear all students?')) {
-                students = [];
-                groups = [];
-                history = [];
-                stats = { totalDraws: 0, totalCorrect: 0 };
-                saveData();
-                renderAll();
-                showToast('CLEARED');
-            }
-        }
-
-        function renderStudents() {
-            const grid = document.getElementById('studentGrid');
-            document.getElementById('studentCount').textContent = students.length;
-            document.getElementById('headerTotal').textContent = students.length;
-
-            if (students.length === 0) {
-                grid.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><div class="empty-state-text">No students added</div></div>';
-                return;
-            }
-
-            grid.innerHTML = students.map((s, i) => `
-                <div class="student-card" onclick="editStudent(${i})">
-                    <div class="student-name">${s.name}</div>
-                    <div class="student-score">${s.score} pts</div>
-                    ${s.group !== null ? `<div class="student-group">Group ${s.group + 1}</div>` : ''}
-                </div>
-            `).join('');
-        }
-
-        function editStudent(index) {
-            const student = students[index];
-            const newScore = prompt(`Edit ${student.name}'s score:`, student.score);
-            if (newScore !== null && !isNaN(newScore)) {
-                students[index].score = parseInt(newScore);
-                saveData();
-                renderAll();
-            }
-        }
-
-        // Groups
-        function randomizeGroups() {
-            const count = parseInt(document.getElementById('groupCount').value);
-            if (students.length < count) {
-                showToast('NOT ENOUGH STUDENTS');
-                return;
-            }
-
-            students.forEach(s => s.group = null);
-            groups = Array.from({ length: count }, (_, i) => ({ name: `Group ${i + 1}`, members: [] }));
-
-            const shuffled = [...students].sort(() => Math.random() - 0.5);
-            shuffled.forEach((s, i) => {
-                const groupIndex = i % count;
-                s.group = groupIndex;
-                groups[groupIndex].members.push(s.name);
-            });
-
-            saveData();
-            renderGroups();
-            showToast('GROUPS CREATED');
-        }
-
-        function clearGroups() {
-            students.forEach(s => s.group = null);
-            groups = [];
-            saveData();
-            renderGroups();
-            showToast('GROUPS CLEARED');
-        }
-
-        function renderGroups() {
-            const container = document.getElementById('groupContainer');
-            const leaderboard = document.getElementById('groupLeaderboard');
-
-            if (groups.length === 0) {
-                container.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><div class="empty-state-text">No groups created</div></div>';
-                leaderboard.innerHTML = '';
-                return;
-            }
-
-            const groupScores = groups.map((g, i) => {
-                const score = students.filter(s => s.group === i).reduce((sum, s) => sum + s.score, 0);
-                return { ...g, score, index: i };
-            });
-
-            container.innerHTML = groupScores.map(g => `
-                <div class="group-card">
-                    <div class="group-header">
-                        <span class="group-name">${g.name}</span>
-                        <span class="group-score">${g.score}</span>
-                    </div>
-                    <div class="group-members">
-                        ${g.members.map(m => `<span class="group-member">${m}</span>`).join('')}
-                    </div>
-                </div>
-            `).join('');
-
-            const sorted = [...groupScores].sort((a, b) => b.score - a.score);
-            leaderboard.innerHTML = `<div class="leaderboard-full">${sorted.map((g, i) => `
-                <div class="leaderboard-item rank-${i + 1}">
-                    <div class="lb-rank">#${i + 1}</div>
-                    <div class="lb-name">${g.name}</div>
-                    <div class="lb-score">${g.score}</div>
-                </div>
-            `).join('')}</div>`;
-        }
-
-        // Questions
-        function addQuestion() {
-            const text = document.getElementById('questionInput').value.trim();
-            const options = [
-                document.getElementById('option1').value.trim(),
-                document.getElementById('option2').value.trim(),
-                document.getElementById('option3').value.trim(),
-                document.getElementById('option4').value.trim()
-            ].filter(o => o);
-            const correct = parseInt(document.getElementById('correctAnswer').value);
-
-            if (!text) {
-                showToast('ENTER QUESTION TEXT');
-                return;
-            }
-            if (options.length < 2) {
-                showToast('ADD AT LEAST 2 OPTIONS');
-                return;
-            }
-
-            questions.push({ text, options, correct });
-
-            document.getElementById('questionInput').value = '';
-            document.getElementById('option1').value = '';
-            document.getElementById('option2').value = '';
-            document.getElementById('option3').value = '';
-            document.getElementById('option4').value = '';
-
-            saveData();
-            renderQuestions();
-            showToast('QUESTION ADDED');
-        }
-
-        function clearQuestions() {
-            if (confirm('Clear all questions?')) {
-                questions = [];
-                saveData();
-                renderQuestions();
-                showToast('QUESTIONS CLEARED');
-            }
-        }
-
-        function renderQuestions() {
-            const list = document.getElementById('questionList');
-            document.getElementById('questionCount').textContent = questions.length;
-
-            if (questions.length === 0) {
-                list.innerHTML = '<div class="empty-state"><div class="empty-state-text">No questions added</div></div>';
-                return;
-            }
-
-            list.innerHTML = questions.map((q, i) => `
-                <div class="question-item">
-                    <div class="question-item-header">${i + 1}. ${q.text}</div>
-                    <div class="question-item-options">
-                        ${q.options.map((o, j) => `
-                            <span class="question-item-option ${j === q.correct ? 'correct' : ''}">${'ABCD'[j]}. ${o}</span>
-                        `).join('')}
-                    </div>
-                    <button class="btn" style="margin-top: 12px; padding: 8px 16px; font-size: 0.8rem;" onclick="deleteQuestion(${i})">DELETE</button>
-                </div>
-            `).join('');
-        }
-
-        function deleteQuestion(index) {
-            questions.splice(index, 1);
-            saveData();
-            renderQuestions();
-        }
-
-        // Draw
-        function startDraw() {
-            if (isSpinning) return;
-            if (students.length === 0) {
-                showToast('ADD STUDENTS FIRST');
-                return;
-            }
-
-            isSpinning = true;
-            document.getElementById('drawBtn').disabled = true;
-            document.getElementById('scoreActions').classList.remove('show');
-            document.getElementById('questionDisplay').style.display = 'none';
-            document.getElementById('slotDisplay').classList.remove('winner');
-
-            const nameEl = document.getElementById('nameDisplay');
-            nameEl.classList.add('spinning');
-
-            if (soundEnabled) playSpinSound();
-
-            let count = 0;
-            const duration = settings.spinDuration * 1000;
-            const interval = 60;
-            const totalIterations = duration / interval;
-
-            const spin = setInterval(() => {
-                const randomStudent = students[Math.floor(Math.random() * students.length)];
-                nameEl.textContent = randomStudent.name.toUpperCase();
-                count++;
-
-                if (count >= totalIterations) {
-                    clearInterval(spin);
-                    finishDraw();
-                }
-            }, interval);
-        }
-
-        function finishDraw() {
-            const nameEl = document.getElementById('nameDisplay');
-            nameEl.classList.remove('spinning');
-
-            currentStudent = students[Math.floor(Math.random() * students.length)];
-            nameEl.textContent = currentStudent.name.toUpperCase();
-
-            document.getElementById('slotDisplay').classList.add('winner');
-
-            if (soundEnabled) playWinSound();
-            createConfetti();
-
-            isSpinning = false;
-            document.getElementById('drawBtn').disabled = false;
-            document.getElementById('scoreActions').classList.add('show');
-
-            stats.totalDraws++;
-            document.getElementById('headerDraws').textContent = stats.totalDraws;
-            saveData();
-            updateStats();
-        }
-
-        function markAnswer(correct) {
-            if (!currentStudent) return;
-
-            const score = correct ? settings.correctScore : settings.wrongScore;
-            const studentIndex = students.findIndex(s => s.name === currentStudent.name);
-            if (studentIndex !== -1) {
-                students[studentIndex].score += score;
-            }
-
-            if (correct) stats.totalCorrect++;
-
-            history.unshift({
-                name: currentStudent.name,
-                correct,
-                score,
-                time: new Date().toLocaleTimeString()
-            });
-
-            saveData();
-            renderHistory();
-            renderAll();
-
-            document.getElementById('scoreActions').classList.remove('show');
-            document.getElementById('questionDisplay').style.display = 'none';
-            document.getElementById('slotDisplay').classList.remove('winner');
-            document.getElementById('nameDisplay').textContent = 'READY';
-            currentStudent = null;
-
-            showToast(correct ? 'CORRECT!' : 'WRONG!');
-        }
-
-        function showQuestion() {
-            if (questions.length === 0) {
-                showToast('NO QUESTIONS AVAILABLE');
-                return;
-            }
-
-            currentQuestion = questions[Math.floor(Math.random() * questions.length)];
-            document.getElementById('questionDisplay').style.display = 'block';
-            document.getElementById('questionText').textContent = currentQuestion.text;
-
-            const optionsEl = document.getElementById('questionOptions');
-            optionsEl.innerHTML = currentQuestion.options.map((o, i) => `
-                <div class="question-option" onclick="selectAnswer(${i})">
-                    <span class="option-letter">${'ABCD'[i]}</span>
-                    <span>${o}</span>
-                </div>
-            `).join('');
-        }
-
-        function selectAnswer(index) {
-            const options = document.querySelectorAll('.question-option');
-            options.forEach((o, i) => {
-                o.classList.remove('correct', 'wrong');
-                if (i === currentQuestion.correct) {
-                    o.classList.add('correct');
-                } else if (i === index && index !== currentQuestion.correct) {
-                    o.classList.add('wrong');
-                }
-            });
-        }
-
-        function renderHistory() {
-            const list = document.getElementById('historyList');
-            document.getElementById('historyCount').textContent = history.length;
-
-            if (history.length === 0) {
-                list.innerHTML = '<div class="empty-state"><div class="empty-state-text">No records yet</div></div>';
-                return;
-            }
-
-            list.innerHTML = history.slice(0, 15).map(h => `
-                <div class="history-item ${h.correct ? 'correct' : 'wrong'}">
-                    <span>${h.name}</span>
-                    <span>${h.correct ? '+' : ''}${h.score}</span>
-                </div>
-            `).join('');
-        }
-
-        // Leaderboard
-        function renderLeaderboardMini() {
-            const sorted = [...students].sort((a, b) => b.score - a.score).slice(0, 5);
-            const list = document.getElementById('leaderboardMini');
-
-            if (sorted.length === 0) {
-                list.innerHTML = '<div class="empty-state"><div class="empty-state-text">No data</div></div>';
-                return;
-            }
-
-            list.innerHTML = sorted.map((s, i) => `
-                <div class="leader-item ${i === 0 ? 'rank-1' : ''}">
-                    <span class="leader-rank">${i + 1}</span>
-                    <span class="leader-name">${s.name}</span>
-                    <span class="leader-score">${s.score}</span>
-                </div>
-            `).join('');
-        }
-
-        function renderLeaderboard() {
-            const sorted = [...students].sort((a, b) => b.score - a.score);
-            const list = document.getElementById('personalLeaderboard');
-
-            if (sorted.length === 0) {
-                list.innerHTML = '<div class="empty-state"><div class="empty-state-text">No data yet</div></div>';
-                return;
-            }
-
-            list.innerHTML = sorted.slice(0, 20).map((s, i) => `
-                <div class="leaderboard-item rank-${i < 3 ? i + 1 : 'other'}">
-                    <div class="lb-rank">#${i + 1}</div>
-                    <div class="lb-name">${s.name}${s.group !== null ? ` (G${s.group + 1})` : ''}</div>
-                    <div class="lb-score">${s.score}</div>
-                </div>
-            `).join('');
-        }
-
-        function updateStats() {
-            document.getElementById('totalStudents').textContent = students.length;
-            document.getElementById('totalDraws').textContent = stats.totalDraws;
-            document.getElementById('totalCorrect').textContent = stats.totalCorrect;
-            document.getElementById('accuracy').textContent = stats.totalDraws > 0
-                ? Math.round(stats.totalCorrect / stats.totalDraws * 100) + '%'
-                : '0%';
-            document.getElementById('headerDraws').textContent = stats.totalDraws;
-        }
-
-        // Sound
-        function initAudio() {
-            if (!audioContext) {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            }
-        }
-
-        function playSpinSound() {
-            initAudio();
-            const osc = audioContext.createOscillator();
-            const gain = audioContext.createGain();
-            osc.connect(gain);
-            gain.connect(audioContext.destination);
-            osc.frequency.value = 150;
-            gain.gain.value = 0.1;
-            osc.start();
-            osc.stop(audioContext.currentTime + 0.03);
-        }
-
-        function playWinSound() {
-            initAudio();
-            [440, 554, 659].forEach((freq, i) => {
-                setTimeout(() => {
-                    const osc = audioContext.createOscillator();
-                    const gain = audioContext.createGain();
-                    osc.connect(gain);
-                    gain.connect(audioContext.destination);
-                    osc.frequency.value = freq;
-                    gain.gain.setValueAtTime(0.2, audioContext.currentTime);
-                    gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-                    osc.start();
-                    osc.stop(audioContext.currentTime + 0.2);
-                }, i * 100);
-            });
-        }
-
-        function toggleSound() {
-            soundEnabled = !soundEnabled;
-            document.getElementById('soundToggle').textContent = soundEnabled ? 'ON' : 'OFF';
-            saveData();
-        }
-
-        // Confetti
-        function createConfetti() {
-            const container = document.getElementById('confettiContainer');
-            const colors = ['#D70050', '#000000', '#FFFFFF'];
-
-            for (let i = 0; i < 60; i++) {
-                const confetti = document.createElement('div');
-                confetti.className = 'confetti';
-                confetti.style.left = Math.random() * 100 + '%';
-                confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
-                confetti.style.width = (Math.random() * 8 + 4) + 'px';
-                confetti.style.height = confetti.style.width;
-                confetti.style.border = '2px solid black';
-                confetti.style.animationDelay = Math.random() * 0.3 + 's';
-                container.appendChild(confetti);
-            }
-
-            setTimeout(() => container.innerHTML = '', 2500);
-        }
-
-        // Settings
-        function saveSettings() {
-            settings.correctScore = parseInt(document.getElementById('correctScore').value) || 10;
-            settings.wrongScore = parseInt(document.getElementById('wrongScore').value) || 0;
-            settings.spinDuration = parseInt(document.getElementById('spinDuration').value) || 2;
-            saveData();
-        }
-
-        // Data
-        function saveData() {
-            localStorage.setItem('pickone_data', JSON.stringify({
-                students, groups, questions, history, settings, stats, soundEnabled
-            }));
-        }
-
-        function loadData() {
-            const data = localStorage.getItem('pickone_data');
-            if (data) {
-                const parsed = JSON.parse(data);
-                students = parsed.students || [];
-                groups = parsed.groups || [];
-                questions = parsed.questions || [];
-                history = parsed.history || [];
-                settings = parsed.settings || { correctScore: 10, wrongScore: 0, spinDuration: 2 };
-                stats = parsed.stats || { totalDraws: 0, totalCorrect: 0 };
-                soundEnabled = parsed.soundEnabled !== false;
-
-                document.getElementById('correctScore').value = settings.correctScore;
-                document.getElementById('wrongScore').value = settings.wrongScore;
-                document.getElementById('spinDuration').value = settings.spinDuration;
-                document.getElementById('soundToggle').textContent = soundEnabled ? 'ON' : 'OFF';
-            }
-        }
-
-        function exportData() {
-            const data = JSON.stringify({ students, groups, questions, history, settings, stats }, null, 2);
-            const blob = new Blob([data], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `pickone_${new Date().toISOString().split('T')[0]}.json`;
-            a.click();
-            showToast('DATA EXPORTED');
-        }
-
-        function importData(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    students = data.students || [];
-                    groups = data.groups || [];
-                    questions = data.questions || [];
-                    history = data.history || [];
-                    settings = data.settings || settings;
-                    stats = data.stats || stats;
-                    saveData();
-                    renderAll();
-                    showToast('DATA IMPORTED');
-                } catch (err) {
-                    showToast('IMPORT FAILED');
-                }
-            };
-            reader.readAsText(file);
-        }
-
-        function resetAllData() {
-            if (confirm('Reset all data? This cannot be undone.')) {
-                localStorage.removeItem('pickone_data');
-                location.reload();
-            }
-        }
-
-        function renderAll() {
-            renderStudents();
-            renderGroups();
-            renderQuestions();
-            renderHistory();
-            renderLeaderboard();
-            renderLeaderboardMini();
-            updateStats();
-        }
-
-        function showToast(message) {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 2000);
-        }
-    </script>
+    <script src="app.js"></script>
 </body>
 </html>
